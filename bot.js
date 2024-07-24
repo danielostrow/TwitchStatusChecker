@@ -6,7 +6,9 @@ const { isStreaming } = require('./twitch');
 // PostgreSQL connection pool
 const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
-    ssl: false // Disable SSL explicitly
+    ssl: {
+        rejectUnauthorized: false
+    }
 });
 
 const client = new Client({
@@ -126,6 +128,32 @@ client.on('messageCreate', async message => {
             await setUserData(message.guild.id, message.author.id, twitchUsername, originalNickname);
             message.reply(`Your Twitch username has been set to ${twitchUsername} and your original nickname has been stored as ${originalNickname}.`);
             console.log(`[${getUTCTimestamp()}] Added ${message.author.tag} (${message.author.id}) to guild ${message.guild.id} with Twitch username ${twitchUsername}`);
+        }
+    }
+
+    if (command === '!setotherTwitch') {
+        const [userId, twitchUsername] = args;
+        if (!userId || !twitchUsername) {
+            return message.reply('Please provide the Discord user ID and Twitch username, e.g., !setotherTwitch <user_id> <username>');
+        }
+
+        const member = await message.guild.members.fetch(userId);
+        const originalNickname = member.nickname || member.user.username;
+
+        const userData = await getUserData(message.guild.id, userId);
+
+        if (userData) {
+            // Update Twitch username if user already exists
+            await setUserData(message.guild.id, userId, twitchUsername, originalNickname);
+            message.reply(`Twitch username for user ${userId} has been updated to ${twitchUsername}.`);
+
+            // Check and update the streaming status immediately
+            checkStreamingStatus(message.guild.id, member);
+        } else {
+            // Set Twitch username and store original nickname if user is new
+            await setUserData(message.guild.id, userId, twitchUsername, originalNickname);
+            message.reply(`Twitch username for user ${userId} has been set to ${twitchUsername} and their original nickname has been stored as ${originalNickname}.`);
+            console.log(`[${getUTCTimestamp()}] Added ${userId} to guild ${message.guild.id} with Twitch username ${twitchUsername}`);
         }
     }
 });
