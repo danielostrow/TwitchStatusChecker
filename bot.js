@@ -35,7 +35,7 @@ async function getUserData(guildId, userId) {
 
 async function setUserData(guildId, userId, twitchUsername, originalNickname) {
     await pool.query(
-        'INSERT INTO user_mapping (guild_id, user_id, twitch_username, original_nickname) VALUES ($1, $2, $3, $4) ON CONFLICT (guild_id, user_id) DO UPDATE SET twitch_username = $3, original_nickname = $4',
+        'INSERT INTO user_mapping (guild_id, user_id, twitch_username, original_nickname) VALUES ($1, $2, $3, $4) ON CONFLICT (guild_id, user_id) DO UPDATE SET twitch_username = $3, original_nickname = COALESCE($4, user_mapping.original_nickname)',
         [guildId, userId, twitchUsername, originalNickname]
     );
 }
@@ -45,7 +45,7 @@ async function updateOriginalNickname(guildId, userId, originalNickname) {
 }
 
 async function deleteOriginalNickname(guildId, userId) {
-    await pool.query('UPDATE user_mapping SET original_nickname = NULL WHERE guild_id = $1 AND user_id = $2', [guildId, userId]);
+    await pool.query('UPDATE user_mapping SET original_nickname = '' WHERE guild_id = $1 AND user_id = $2', [guildId, userId]);
 }
 
 async function checkStreamingStatus(guildId, member) {
